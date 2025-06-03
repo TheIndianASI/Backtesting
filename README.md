@@ -10,4 +10,4 @@ python backtest.py --csv path/to/data.csv --from-tz CST
 
 The CSV file should include the columns `Timestamp`, `Open`, `High`, `Low`, `Close`, and `Volume`. Timestamps are converted from the provided timezone (default `US/Central`) to Indian Standard Time before analysis.
 
-The script outputs the number of trades, wins, losses, risk/reward ratio, and the most profitable days.
+The script outputs the number of trades, wins, losses, a win/loss ratio, and the most profitable days.

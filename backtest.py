@@ -34,11 +34,11 @@ class Backtester:
         if direction == 'buy':
             # two red candles with no upper wicks
             cond_color = (candles['HA_Close'] < candles['HA_Open']).all()
-            cond_wick = (candles['HA_High'] == candles['HA_Open']).all()
+            cond_wick = ((candles['HA_High'] - candles['HA_Open']).abs() < 1e-6).all()
             return cond_color and cond_wick
         else:
             cond_color = (candles['HA_Close'] > candles['HA_Open']).all()
-            cond_wick = (candles['HA_Low'] == candles['HA_Open']).all()
+            cond_wick = ((candles['HA_Low'] - candles['HA_Open']).abs() < 1e-6).all()
             return cond_color and cond_wick
 
     def _is_high_volume_doji(self, idx):
@@ -66,7 +66,6 @@ class Backtester:
         in_position = False
         entry_price = 0
         stop_price = 0
-        entry_idx = 0
         direction = None
 
         for i in range(100, len(df)):
@@ -85,7 +84,6 @@ class Backtester:
                     risk = df['HA_Close'].iloc[i] - df['HA_Low'].iloc[i] if trend == 'buy' else df['HA_High'].iloc[i] - df['HA_Close'].iloc[i]
                     stop_price = entry_price - risk if trend == 'buy' else entry_price + risk
                     tp_price = entry_price + risk if trend == 'buy' else entry_price - risk
-                    entry_idx = i
                     direction = trend
                     self.trades.append({'entry_time': df['Timestamp'].iloc[i],
                                         'entry_price': entry_price,
@@ -128,7 +126,7 @@ class Backtester:
         wins = sum(1 for t in self.trades if t['result'] == 1)
         losses = sum(1 for t in self.trades if t['result'] == -1)
         total = len(self.trades)
-        ratio = wins / max(losses, 1)
+        win_loss_ratio = wins / max(losses, 1)
         df = pd.DataFrame(self.trades)
         df['day'] = df['entry_time'].dt.day_name()
         best_days = df[df['result']==1]['day'].value_counts()
@@ -136,7 +134,7 @@ class Backtester:
             'total_trades': total,
             'wins': wins,
             'losses': losses,
-            'risk_reward': ratio,
+            'win_loss_ratio': win_loss_ratio,
             'best_days': best_days.to_dict()
         }
 
@@ -148,7 +146,11 @@ def load_data(path, from_tz='US/Central', to_tz='Asia/Kolkata'):
     df['Timestamp'] = pd.to_datetime(df['Timestamp'])
     tz_from = pytz.timezone(from_tz)
     tz_to = pytz.timezone(to_tz)
-    df['Timestamp'] = df['Timestamp'].dt.tz_localize(tz_from).dt.tz_convert(tz_to)
+    if df['Timestamp'].dt.tz is None:
+        df['Timestamp'] = df['Timestamp'].dt.tz_localize(tz_from)
+    else:
+        df['Timestamp'] = df['Timestamp'].dt.tz_convert(tz_from)
+    df['Timestamp'] = df['Timestamp'].dt.tz_convert(tz_to)
     return df
 
 
@@ -168,7 +170,7 @@ def main():
         print('Total trades:', summary['total_trades'])
         print('Wins:', summary['wins'])
         print('Losses:', summary['losses'])
-        print('Risk Reward Ratio:', summary['risk_reward'])
+        print('Win/Loss Ratio:', summary['win_loss_ratio'])
         print('Best days:', summary['best_days'])
 
 
