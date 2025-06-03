@@ -139,8 +139,12 @@ class Backtester:
         }
 
 
-def load_data(path, from_tz='US/Central', to_tz='Asia/Kolkata'):
-    df = pd.read_csv(path)
+def load_data(data, from_tz='US/Central', to_tz='Asia/Kolkata'):
+    """Load candle data from a CSV path or a DataFrame and convert timezones."""
+    if isinstance(data, pd.DataFrame):
+        df = data.copy()
+    else:
+        df = pd.read_csv(data)
     if 'Timestamp' not in df.columns:
         raise ValueError('CSV must contain Timestamp column')
     df['Timestamp'] = pd.to_datetime(df['Timestamp'])
